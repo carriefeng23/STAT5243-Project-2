@@ -53,3 +53,65 @@ This part is implemented in `data cleaning(preprocessing).ipynb` and focuses on 
 ### Outputs
 - `cleaned_dataset.csv`: cleaned dataset
 - `cleaning_log.csv`: step-by-step cleaning actions
+
+
+
+### Feature Engineering
+
+- `This part is implemented in the Shiny application and focuses on creating additional variables from the cleaned dataset to enhance data exploration and downstream analysis.
+
+### What It Does
+
+- `Allows users to upload a cleaned dataset or use a built-in sample dataset (iris, mtcars)
+
+- `Supports interactive feature engineering operations through the Shiny interface
+
+- `Generates new variables dynamically without modifying the original dataset
+
+- `Records each transformation step in a feature engineering log
+
+- `Provides a preview of the updated dataset after new features are created
+
+### Supported Feature Engineering Methods
+
+- `Single-variable transformations:
+
+- `Log transformation (log(x + 1))
+
+- `Square transformation (x²)
+
+- `Square root transformation (√x)
+
+- `Two-variable interaction features:
+
+- `Multiplication (x * y)
+
+- `Division (x / y)
+
+- `Addition (x + y)
+
+- `Subtraction (x - y)
+
+### Numeric binning:
+
+- `Converts continuous numeric variables into categorical bins
+
+- `Number of bins can be selected interactively
+
+### Key Features
+
+- `Automatically detects numeric variables available for transformation
+
+- `Prevents invalid operations such as division by zero
+
+- `Handles negative values safely for logarithm and square root transformations
+
+- `Avoids overwriting existing columns by generating unique feature names
+
+- `Updates the dataset preview immediately after each transformation
+
+### Outputs
+
+- `engineered_dataset.csv: dataset with newly created features
+
+- `feature_log.csv: step-by-step record of feature engineering operations
