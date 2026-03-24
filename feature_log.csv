@@ -1,0 +1,7 @@
+"step","feature_name","method","source_columns"
+1,"Sepal.Length_x_Sepal.Length","Multiply","Sepal.Length, Sepal.Length"
+2,"Sepal.Length_bin","Binning: 4 bins","Sepal.Length"
+3,"Sepal.Length_x_Sepal.Length_2","Multiply","Sepal.Length, Sepal.Length"
+4,"Sepal.Width_x_Sepal.Width","Multiply","Sepal.Width, Sepal.Width"
+5,"Sepal.Length_bin_2","Binning: 4 bins","Sepal.Length"
+6,"Petal.Width_bin","Binning: 4 bins","Petal.Width"
