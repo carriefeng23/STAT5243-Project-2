@@ -2,6 +2,7 @@ library(shiny) # interactive web app in R
 library(tools)
 library(readxl) # reads excel files
 library(jsonlite) # reads json files
+library(ggplot2) # generate data visualization
 
 options(shiny.maxRequestSize = 30 * 1024^2) # increase max upload size to 30 mb
 
@@ -9,7 +10,7 @@ options(shiny.maxRequestSize = 30 * 1024^2) # increase max upload size to 30 mb
 ui <- fluidPage(
   titlePanel("STAT GR5243 Project 2 -- Web App Development"),
   
-  # sidebar that has dataset selection buttons and feature engineering controls
+  # sidebar that has dataset selection buttons, cleaning controls, and feature engineering controls
   sidebarLayout(
     sidebarPanel(
       h4("Step 1: Choose a dataset"),
@@ -36,7 +37,47 @@ ui <- fluidPage(
       ),
       
       hr(),
-      h4("Step 2: Feature Engineering"),
+      h4("Step 2: Data Cleaning"),
+      
+      # remove duplicate rows
+      checkboxInput("remove_duplicates", "Remove duplicate rows", value = TRUE),
+      
+      # handle missing values
+      checkboxInput("handle_missing", "Handle missing values", value = TRUE),
+      selectInput(
+        "missing_method",
+        "Missing value method:",
+        choices = c("Remove rows with missing values" = "remove",
+                    "Mean imputation (numeric only)" = "mean")
+      ),
+      
+      # handle outliers
+      checkboxInput("handle_outliers", "Handle outliers", value = FALSE),
+      selectInput(
+        "outlier_method",
+        "Outlier method:",
+        choices = c("Cap outliers using IQR" = "cap",
+                    "Remove rows with outliers" = "remove")
+      ),
+      
+      # scale numeric variables
+      checkboxInput("scale_numeric", "Scale numeric variables", value = FALSE),
+      selectInput(
+        "scaling_method",
+        "Scaling method:",
+        choices = c("Standardization (z-score)" = "standard",
+                    "Min-Max scaling" = "minmax")
+      ),
+      
+      # apply cleaning and download outputs
+      actionButton("apply_cleaning", "Apply Data Cleaning"),
+      br(), br(),
+      downloadButton("download_cleaned_data", "Download Cleaned Dataset"),
+      br(), br(),
+      downloadButton("download_cleaning_log", "Download Cleaning Log"),
+      
+      hr(),
+      h4("Step 3: Feature Engineering"),
       
       # choose the feature engineering method
       radioButtons(
@@ -80,17 +121,15 @@ ui <- fluidPage(
         numericInput("n_bins", "Number of bins:", value = 4, min = 2, max = 10)
       ),
       
-      # button to apply the selected feature engineering method
+      # apply feature engineering and download outputs
       actionButton("apply_fe", "Apply Feature Engineering"),
       br(), br(),
-      
-      # buttons to download outputs
       downloadButton("download_data", "Download Engineered Dataset"),
       br(), br(),
       downloadButton("download_log", "Download Feature Log")
     ),
     
-    # main area that displays dataset info, preview, and feature engineering results
+    # main area that displays dataset info, preview, cleaning results, and feature engineering results
     mainPanel(
       tabsetPanel(
         tabPanel(
@@ -106,6 +145,19 @@ ui <- fluidPage(
         ),
         
         tabPanel(
+          "Data Cleaning",
+          h3("Cleaned Dataset Preview"),
+          tableOutput("clean_preview"),
+          
+          br(),
+          h3("Cleaning Log"),
+          tableOutput("clean_log_preview"),
+          
+          br(),
+          verbatimTextOutput("clean_status")
+        ),
+        
+        tabPanel(
           "Feature Engineering",
           h3("Current Dataset Preview"),
           tableOutput("fe_preview"),
@@ -116,6 +168,86 @@ ui <- fluidPage(
           
           br(),
           verbatimTextOutput("fe_status")
+        ),
+        
+        tabPanel(
+          "Exploratory Data Analysis",
+          p("Explore the current dataset after cleaning and feature engineering, or compare with the raw dataset."),
+          
+          fluidRow(
+            column(
+              width = 4,
+              h3("EDA Controls"),
+              
+              radioButtons(
+                "eda_dataset_source",
+                "Choose dataset for EDA:",
+                choices = c(
+                  "Current engineered dataset" = "engineered",
+                  "Cleaned dataset" = "cleaned",
+                  "Original raw dataset" = "raw"
+                ),
+                selected = "engineered"
+              ),
+              
+              selectInput(
+                "eda_plot_type",
+                "Choose plot type:",
+                choices = c(
+                  "Histogram" = "hist",
+                  "Boxplot" = "box",
+                  "Bar Chart" = "bar",
+                  "Scatter Plot" = "scatter"
+                ),
+                selected = "hist"
+              ),
+              
+              conditionalPanel(
+                condition = "input.eda_plot_type == 'hist' || input.eda_plot_type == 'box' || input.eda_plot_type == 'scatter'",
+                uiOutput("eda_num_var_ui")
+              ),
+              
+              conditionalPanel(
+                condition = "input.eda_plot_type == 'box' || input.eda_plot_type == 'bar'",
+                uiOutput("eda_cat_var_ui")
+              ),
+              
+              conditionalPanel(
+                condition = "input.eda_plot_type == 'scatter'",
+                uiOutput("eda_x_var_ui"),
+                uiOutput("eda_y_var_ui")
+              ),
+              
+              conditionalPanel(
+                condition = "input.eda_plot_type == 'hist'",
+                sliderInput("eda_bins", "Number of bins:", min = 5, max = 50, value = 20)
+              ),
+              
+              checkboxInput("eda_show_na", "Show missing value summary", value = TRUE)
+            ),
+            
+            column(
+              width = 8,
+              h3("Dataset Summary"),
+              verbatimTextOutput("eda_summary"),
+              
+              br(),
+              h3("EDA Plot"),
+              plotOutput("eda_plot", height = "450px"),
+              
+              br(),
+              h3("Missing Values by Column"),
+              tableOutput("eda_missing"),
+              
+              br(),
+              h3("Numeric Summary"),
+              tableOutput("eda_numeric_summary"),
+              
+              br(),
+              h3("Categorical Summary"),
+              tableOutput("eda_categorical_summary")
+            )
+          )
         )
       )
     )
@@ -174,6 +306,265 @@ server <- function(input, output, session) {
     head(data_raw(), 10)
   })
   
+  # store the cleaned dataset after data cleaning operations
+  data_clean <- reactiveVal(NULL)
+  
+  # store the cleaning history for traceability
+  cleaning_log <- reactiveVal(data.frame(
+    step = integer(),
+    action = character(),
+    details = character(),
+    stringsAsFactors = FALSE
+  ))
+  
+  # reset the cleaned dataset and cleaning log whenever the source dataset changes
+  observe({
+    df <- data_raw()
+    req(df)
+    
+    data_clean(df)
+    cleaning_log(data.frame(
+      step = integer(),
+      action = character(),
+      details = character(),
+      stringsAsFactors = FALSE
+    ))
+  })
+  
+  # cap outliers using IQR
+  cap_outliers_iqr <- function(x) {
+    if (!is.numeric(x)) return(x)
+    
+    q1 <- quantile(x, 0.25, na.rm = TRUE)
+    q3 <- quantile(x, 0.75, na.rm = TRUE)
+    iqr <- q3 - q1
+    lower <- q1 - 1.5 * iqr
+    upper <- q3 + 1.5 * iqr
+    
+    x[x < lower] <- lower
+    x[x > upper] <- upper
+    x
+  }
+  
+  # remove rows containing outliers using IQR
+  remove_outlier_rows_iqr <- function(df) {
+    numeric_cols <- names(df)[sapply(df, is.numeric)]
+    if (length(numeric_cols) == 0) return(df)
+    
+    keep <- rep(TRUE, nrow(df))
+    
+    for (col in numeric_cols) {
+      x <- df[[col]]
+      q1 <- quantile(x, 0.25, na.rm = TRUE)
+      q3 <- quantile(x, 0.75, na.rm = TRUE)
+      iqr <- q3 - q1
+      lower <- q1 - 1.5 * iqr
+      upper <- q3 + 1.5 * iqr
+      
+      keep <- keep & (is.na(x) | (x >= lower & x <= upper))
+    }
+    
+    df[keep, , drop = FALSE]
+  }
+  
+  # apply the selected data cleaning operations
+  observeEvent(input$apply_cleaning, {
+    df <- data_raw()
+    req(df)
+    
+    log_df <- data.frame(
+      step = integer(),
+      action = character(),
+      details = character(),
+      stringsAsFactors = FALSE
+    )
+    
+    # remove duplicate rows
+    if (isTRUE(input$remove_duplicates)) {
+      before_n <- nrow(df)
+      df <- unique(df)
+      removed <- before_n - nrow(df)
+      
+      log_df <- rbind(
+        log_df,
+        data.frame(
+          step = nrow(log_df) + 1,
+          action = "Remove duplicates",
+          details = paste("Removed", removed, "duplicate row(s)."),
+          stringsAsFactors = FALSE
+        )
+      )
+    }
+    
+    # handle missing values
+    if (isTRUE(input$handle_missing)) {
+      if (input$missing_method == "remove") {
+        before_n <- nrow(df)
+        df <- na.omit(df)
+        removed <- before_n - nrow(df)
+        
+        log_df <- rbind(
+          log_df,
+          data.frame(
+            step = nrow(log_df) + 1,
+            action = "Handle missing values",
+            details = paste("Removed", removed, "row(s) containing missing values."),
+            stringsAsFactors = FALSE
+          )
+        )
+      }
+      
+      if (input$missing_method == "mean") {
+        numeric_cols_clean <- names(df)[sapply(df, is.numeric)]
+        
+        for (col in numeric_cols_clean) {
+          if (anyNA(df[[col]])) {
+            df[[col]][is.na(df[[col]])] <- mean(df[[col]], na.rm = TRUE)
+          }
+        }
+        
+        log_df <- rbind(
+          log_df,
+          data.frame(
+            step = nrow(log_df) + 1,
+            action = "Handle missing values",
+            details = "Applied mean imputation to numeric columns.",
+            stringsAsFactors = FALSE
+          )
+        )
+      }
+    }
+    
+    # handle outliers
+    if (isTRUE(input$handle_outliers)) {
+      if (input$outlier_method == "cap") {
+        numeric_cols_clean <- names(df)[sapply(df, is.numeric)]
+        
+        for (col in numeric_cols_clean) {
+          df[[col]] <- cap_outliers_iqr(df[[col]])
+        }
+        
+        log_df <- rbind(
+          log_df,
+          data.frame(
+            step = nrow(log_df) + 1,
+            action = "Handle outliers",
+            details = "Capped numeric outliers using the IQR rule.",
+            stringsAsFactors = FALSE
+          )
+        )
+      }
+      
+      if (input$outlier_method == "remove") {
+        before_n <- nrow(df)
+        df <- remove_outlier_rows_iqr(df)
+        removed <- before_n - nrow(df)
+        
+        log_df <- rbind(
+          log_df,
+          data.frame(
+            step = nrow(log_df) + 1,
+            action = "Handle outliers",
+            details = paste("Removed", removed, "row(s) containing numeric outliers."),
+            stringsAsFactors = FALSE
+          )
+        )
+      }
+    }
+    
+    # scale numeric variables
+    if (isTRUE(input$scale_numeric)) {
+      numeric_cols_clean <- names(df)[sapply(df, is.numeric)]
+      
+      if (input$scaling_method == "standard") {
+        for (col in numeric_cols_clean) {
+          s <- sd(df[[col]], na.rm = TRUE)
+          m <- mean(df[[col]], na.rm = TRUE)
+          
+          if (!is.na(s) && s != 0) {
+            df[[col]] <- (df[[col]] - m) / s
+          }
+        }
+        
+        log_df <- rbind(
+          log_df,
+          data.frame(
+            step = nrow(log_df) + 1,
+            action = "Scale numeric variables",
+            details = "Applied z-score standardization to numeric columns.",
+            stringsAsFactors = FALSE
+          )
+        )
+      }
+      
+      if (input$scaling_method == "minmax") {
+        for (col in numeric_cols_clean) {
+          min_val <- min(df[[col]], na.rm = TRUE)
+          max_val <- max(df[[col]], na.rm = TRUE)
+          
+          if (!is.na(min_val) && !is.na(max_val) && max_val != min_val) {
+            df[[col]] <- (df[[col]] - min_val) / (max_val - min_val)
+          }
+        }
+        
+        log_df <- rbind(
+          log_df,
+          data.frame(
+            step = nrow(log_df) + 1,
+            action = "Scale numeric variables",
+            details = "Applied min-max scaling to numeric columns.",
+            stringsAsFactors = FALSE
+          )
+        )
+      }
+    }
+    
+    data_clean(df)
+    cleaning_log(log_df)
+  })
+  
+  # display a preview of the cleaned dataset
+  output$clean_preview <- renderTable({
+    req(data_clean())
+    head(data_clean(), 10)
+  })
+  
+  # display the cleaning log
+  output$clean_log_preview <- renderTable({
+    req(cleaning_log())
+    cleaning_log()
+  })
+  
+  # display the cleaned dataset status
+  output$clean_status <- renderPrint({
+    df <- data_clean()
+    req(df)
+    
+    cat("Rows:", nrow(df), "\n")
+    cat("Columns:", ncol(df), "\n")
+    cat("Cleaning steps recorded:", nrow(cleaning_log()), "\n")
+  })
+  
+  # download the current cleaned dataset as a csv file
+  output$download_cleaned_data <- downloadHandler(
+    filename = function() {
+      "cleaned_dataset.csv"
+    },
+    content = function(file) {
+      write.csv(data_clean(), file, row.names = FALSE)
+    }
+  )
+  
+  # download the cleaning log as a csv file
+  output$download_cleaning_log <- downloadHandler(
+    filename = function() {
+      "cleaning_log.csv"
+    },
+    content = function(file) {
+      write.csv(cleaning_log(), file, row.names = FALSE)
+    }
+  )
+  
   # store the current working dataset after feature engineering operations
   data_fe <- reactiveVal(NULL)
   
@@ -186,9 +577,9 @@ server <- function(input, output, session) {
     stringsAsFactors = FALSE
   ))
   
-  # reset the working dataset and log whenever the source dataset changes
+  # reset the working dataset and log whenever the cleaned dataset changes
   observe({
-    df <- data_raw()
+    df <- data_clean()
     req(df)
     
     data_fe(df)
@@ -359,26 +750,6 @@ server <- function(input, output, session) {
     fe_log(log_df)
   })
   
-  # download the current engineered dataset as a csv file
-  output$download_data <- downloadHandler(
-    filename = function() {
-      "engineered_dataset.csv"
-    },
-    content = function(file) {
-      write.csv(data_fe(), file, row.names = FALSE)
-    }
-  )
-  
-  # download the feature engineering log as a csv file
-  output$download_log <- downloadHandler(
-    filename = function() {
-      "feature_log.csv"
-    },
-    content = function(file) {
-      write.csv(fe_log(), file, row.names = FALSE)
-    }
-  )
-  
   # display a preview of the current engineered dataset
   output$fe_preview <- renderTable({
     req(data_fe())
@@ -399,6 +770,238 @@ server <- function(input, output, session) {
     cat("Rows:", nrow(df), "\n")
     cat("Columns:", ncol(df), "\n")
     cat("New features created:", nrow(fe_log()), "\n")
+  })
+  
+  # download the current engineered dataset as a csv file
+  output$download_data <- downloadHandler(
+    filename = function() {
+      "engineered_dataset.csv"
+    },
+    content = function(file) {
+      write.csv(data_fe(), file, row.names = FALSE)
+    }
+  )
+  
+  # download the feature engineering log as a csv file
+  output$download_log <- downloadHandler(
+    filename = function() {
+      "feature_log.csv"
+    },
+    content = function(file) {
+      write.csv(fe_log(), file, row.names = FALSE)
+    }
+  )
+  
+  # ---------------------------
+  # EDA section
+  # ---------------------------
+  
+  eda_data <- reactive({
+    if (input$eda_dataset_source == "raw") {
+      data_raw()
+    } else if (input$eda_dataset_source == "cleaned") {
+      data_clean()
+    } else {
+      data_fe()
+    }
+  })
+  
+  eda_numeric_cols <- reactive({
+    df <- eda_data()
+    req(df)
+    names(df)[sapply(df, is.numeric)]
+  })
+  
+  eda_categorical_cols <- reactive({
+    df <- eda_data()
+    req(df)
+    names(df)[sapply(df, function(x) is.character(x) || is.factor(x))]
+  })
+  
+  output$eda_num_var_ui <- renderUI({
+    cols <- eda_numeric_cols()
+    if (length(cols) == 0) {
+      return(helpText("No numeric columns available."))
+    }
+    selectInput("eda_num_var", "Select numeric variable:", choices = cols)
+  })
+  
+  output$eda_cat_var_ui <- renderUI({
+    cols <- eda_categorical_cols()
+    if (length(cols) == 0) {
+      return(helpText("No categorical columns available."))
+    }
+    selectInput("eda_cat_var", "Select categorical variable:", choices = cols)
+  })
+  
+  output$eda_x_var_ui <- renderUI({
+    cols <- eda_numeric_cols()
+    if (length(cols) == 0) {
+      return(helpText("No numeric columns available."))
+    }
+    selectInput("eda_x_var", "Select X variable:", choices = cols)
+  })
+  
+  output$eda_y_var_ui <- renderUI({
+    cols <- eda_numeric_cols()
+    if (length(cols) == 0) {
+      return(helpText("No numeric columns available."))
+    }
+    default_y <- if (length(cols) >= 2) cols[2] else cols[1]
+    selectInput("eda_y_var", "Select Y variable:", choices = cols, selected = default_y)
+  })
+  
+  output$eda_summary <- renderPrint({
+    df <- eda_data()
+    req(df)
+    
+    cat("Rows:", nrow(df), "\n")
+    cat("Columns:", ncol(df), "\n\n")
+    
+    cat("Column Names:\n")
+    print(names(df))
+    
+    cat("\nColumn Types:\n")
+    print(sapply(df, function(x) class(x)[1]))
+    
+    if (isTRUE(input$eda_show_na)) {
+      cat("\nMissing Values Per Column:\n")
+      print(colSums(is.na(df)))
+    }
+    
+    if (input$eda_dataset_source == "engineered") {
+      cat("\nFeature Engineering Steps Applied:", nrow(fe_log()), "\n")
+      if (nrow(fe_log()) > 0) {
+        print(fe_log())
+      }
+    }
+    
+    if (input$eda_dataset_source == "cleaned") {
+      cat("\nCleaning Steps Applied:", nrow(cleaning_log()), "\n")
+      if (nrow(cleaning_log()) > 0) {
+        print(cleaning_log())
+      }
+    }
+  })
+  
+  output$eda_missing <- renderTable({
+    df <- eda_data()
+    req(df)
+    
+    data.frame(
+      column = names(df),
+      missing_count = colSums(is.na(df)),
+      missing_percent = round(100 * colSums(is.na(df)) / nrow(df), 2),
+      stringsAsFactors = FALSE
+    )
+  })
+  
+  output$eda_numeric_summary <- renderTable({
+    df <- eda_data()
+    req(df)
+    
+    num_cols <- eda_numeric_cols()
+    if (length(num_cols) == 0) {
+      return(data.frame(Message = "No numeric columns available"))
+    }
+    
+    data.frame(
+      variable = num_cols,
+      mean = sapply(df[num_cols], function(x) round(mean(x, na.rm = TRUE), 4)),
+      sd = sapply(df[num_cols], function(x) round(sd(x, na.rm = TRUE), 4)),
+      min = sapply(df[num_cols], function(x) round(min(x, na.rm = TRUE), 4)),
+      median = sapply(df[num_cols], function(x) round(median(x, na.rm = TRUE), 4)),
+      max = sapply(df[num_cols], function(x) round(max(x, na.rm = TRUE), 4)),
+      stringsAsFactors = FALSE
+    )
+  })
+  
+  output$eda_categorical_summary <- renderTable({
+    df <- eda_data()
+    req(df)
+    
+    cat_cols <- eda_categorical_cols()
+    if (length(cat_cols) == 0) {
+      return(data.frame(Message = "No categorical columns available"))
+    }
+    
+    data.frame(
+      variable = cat_cols,
+      unique_values = sapply(df[cat_cols], function(x) length(unique(x))),
+      most_frequent = sapply(df[cat_cols], function(x) {
+        x_no_na <- x[!is.na(x)]
+        if (length(x_no_na) == 0) return(NA)
+        names(sort(table(x_no_na), decreasing = TRUE))[1]
+      }),
+      stringsAsFactors = FALSE
+    )
+  })
+  
+  output$eda_plot <- renderPlot({
+    df <- eda_data()
+    req(df)
+    
+    if (input$eda_plot_type == "hist") {
+      req(input$eda_num_var)
+      
+      ggplot(df, aes(x = .data[[input$eda_num_var]])) +
+        geom_histogram(bins = input$eda_bins, fill = "steelblue", color = "white") +
+        labs(
+          title = paste("Histogram of", input$eda_num_var),
+          x = input$eda_num_var,
+          y = "Count"
+        ) +
+        theme_minimal(base_size = 14)
+      
+    } else if (input$eda_plot_type == "box") {
+      req(input$eda_num_var)
+      
+      if (!is.null(input$eda_cat_var) && input$eda_cat_var %in% names(df)) {
+        ggplot(df, aes(x = .data[[input$eda_cat_var]], y = .data[[input$eda_num_var]])) +
+          geom_boxplot(fill = "tomato", alpha = 0.8) +
+          labs(
+            title = paste("Boxplot of", input$eda_num_var, "by", input$eda_cat_var),
+            x = input$eda_cat_var,
+            y = input$eda_num_var
+          ) +
+          theme_minimal(base_size = 14) +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1))
+      } else {
+        ggplot(df, aes(y = .data[[input$eda_num_var]])) +
+          geom_boxplot(fill = "tomato", alpha = 0.8) +
+          labs(
+            title = paste("Boxplot of", input$eda_num_var),
+            y = input$eda_num_var
+          ) +
+          theme_minimal(base_size = 14)
+      }
+      
+    } else if (input$eda_plot_type == "bar") {
+      req(input$eda_cat_var)
+      
+      ggplot(df, aes(x = .data[[input$eda_cat_var]])) +
+        geom_bar(fill = "darkseagreen3") +
+        labs(
+          title = paste("Bar Chart of", input$eda_cat_var),
+          x = input$eda_cat_var,
+          y = "Count"
+        ) +
+        theme_minimal(base_size = 14) +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+      
+    } else if (input$eda_plot_type == "scatter") {
+      req(input$eda_x_var, input$eda_y_var)
+      
+      ggplot(df, aes(x = .data[[input$eda_x_var]], y = .data[[input$eda_y_var]])) +
+        geom_point(color = "purple", alpha = 0.7, size = 2) +
+        geom_smooth(method = "lm", se = FALSE, color = "orange") +
+        labs(
+          title = paste("Scatter Plot:", input$eda_y_var, "vs", input$eda_x_var),
+          x = input$eda_x_var,
+          y = input$eda_y_var
+        ) +
+        theme_minimal(base_size = 14)
+    }
   })
 }
 
