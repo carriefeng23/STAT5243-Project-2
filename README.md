@@ -4,52 +4,52 @@ This project is an interactive Shiny web application for dataset upload, preproc
 
  ##App Workflow
 
--The application follows a 4-step data analysis pipeline:
+- The application follows a 4-step data analysis pipeline:
 
 # Dataset Upload & Preview
--Data Cleaning
--Feature Engineering
--Exploratory Data Analysis (EDA)
+- Data Cleaning
+- Feature Engineering
+- Exploratory Data Analysis (EDA)
 ## Step 1: Dataset Upload & Preview
--What to Do
--Choose:
--Upload file, or
--Use sample dataset (iris / mtcars)
--If uploading:
--Click Upload a dataset
--Supported formats:
+- What to Do
+- Choose:
+- Upload file, or
+- Use sample dataset (iris / mtcars)
+- If uploading:
+- Click Upload a dataset
+- Supported formats:
 .csv
 .xlsx / .xls
 .rds
 .json
--What You Get
--Dataset structure:
--Number of rows and columns
--Column names and types
--Missing values per column
--Data preview:
--First 10 rows of the dataset
+- What You Get
+- Dataset structure:
+- Number of rows and columns
+- Column names and types
+- Missing values per column
+- Data preview:
+- First 10 rows of the dataset
 # Step 2: Data Cleaning
--Available Operations
--1. Remove Duplicate Rows
--Removes exact duplicate observations
--2. Handle Missing Values
+- Available Operations
+- 1. Remove Duplicate Rows
+- Removes exact duplicate observations
+- 2. Handle Missing Values
 
--Choose one method:
+- Choose one method:
 
--Remove rows with missing values
--Mean imputation (numeric only)
--3. Scale Numeric Variables (Optional)
+- Remove rows with missing values
+- Mean imputation (numeric only)
+- 3. Scale Numeric Variables (Optional)
 
--Choose one method:
+- Choose one method:
 
--Standardization (z-score)
--Min-Max scaling
--How to Use
--Select cleaning options in the sidebar
--Click Apply Data Cleaning
--Go to Data Cleaning tab
--Outputs
+- Standardization (z-score)
+- Min-Max scaling
+- How to Use
+- Select cleaning options in the sidebar
+- Click Apply Data Cleaning
+- Go to Data Cleaning tab
+- Outputs
 -Cleaned dataset preview
 -Cleaning log (step-by-step actions)
 -Download
