@@ -1,8 +1,0 @@
-step,action
-1,Standardized column names.
-2,Standardized text columns and normalized common missing-value markers.
-3,"Removed 1 duplicate rows (before=150, after=149)."
-4,"Imputed missing values: numeric='median', categorical='mode'."
-5,Capped 4 outlier values using IQR method (multiplier=1.5).
-6,"Scaled numeric columns using standard scaler: ['sepal_length_cm', 'sepal_width_cm', 'petal_length_cm', 'petal_width_cm', 'target']"
-7,No categorical columns available for encoding.
