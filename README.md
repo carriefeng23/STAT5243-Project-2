@@ -96,7 +96,6 @@ At the Exploratory Data Analysis tab panel, under `EDA Controls`, user can choos
 - `Cleaned dataset`
 - `Original raw dataset`
 ## Choosing Plot Type
-The plot will be generated under the 'EDA Plot'\n
 Under `EDA Controls`, user can choose the plot type they want to generate throught the drop down menu `Choose plot type:`
 - Histogram
   - 1. Select the numeric variable through drop down menu `Select numeric variable:`
@@ -109,6 +108,7 @@ Under `EDA Controls`, user can choose the plot type they want to generate throug
   - 1. Select the numeric variable through drop down menu `Select numeric variable:`
   - 2. Select the X variable through drop down menu `Select X variable:`
   - 3. Select the Y variable through drop down menu `Select Y variable:`
+Note: The plot will be generated under the 'EDA Plot'. 
 ## How to Use
 - Select dataset
 - Choose plot type
