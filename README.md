@@ -91,7 +91,7 @@ user can choose to download engineered dataset and feature log as csv files by c
 - feature_log.csv
 # Step 4: Exploratory Data Analysis (EDA)
 ## Choosing Dataset
-At the Exploratory Data Analysis tab panel, user can choose dataset by selecting either:
+At the Exploratory Data Analysis tab panel, under `EDA Controls`, user can choose dataset by selecting either:
 - `Current engineered dataset`
 - `Cleaned dataset`
 - `Original raw dataset`
@@ -111,9 +111,10 @@ Under `EDA Controls`, user can choose the plot type they want to generate throug
   - 3. Select the Y variable through drop down menu `Select Y variable:`
 ## How to Use
 - Select dataset
+- Choose plot type
 - Choose primary variable
 - (Optional) Choose secondary variable
-- View plot and summary
+- View plot and summary on the right side of the tab panel
 ## Outputs
 - Dataset Summary
 - EDA Plot
