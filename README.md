@@ -90,40 +90,38 @@ user can choose to download engineered dataset and feature log as csv files by c
 - engineered_dataset.csv
 - feature_log.csv
 # Step 4: Exploratory Data Analysis (EDA)
-- Dataset Selection
-- Choose:
-- Cleaned dataset
-- Engineered dataset
-## Univariate Analysis
-- Numeric Variables
+## Choosing Dataset
+At the Exploratory Data Analysis tab panel, user can choose dataset by selecting either:
+- `Current engineered dataset`
+- `Cleaned dataset`
+- `Original raw dataset`
+## Choosing Plot Type
+The plot will be generated under the 'EDA Plot'
+Under `EDA Controls`, user can choose the plot type they want to generate throught the drop down menu `Choose plot type:`
 - Histogram
-- Density curve
-- Summary statistics (mean, median, sd, etc.)
-- Categorical Variables
-- Bar plot
-- Frequency table
-## Bivariate Analysis
-- Numeric vs Numeric
-- Scatter plot
-- Linear trend line
-- Correlation coefficient
-- Numeric vs Categorical
+  - 1. Select the numeric variable through drop down menu `Select numeric variable:`
 - Boxplot
-- Categorical vs Categorical
-- Grouped bar chart
-## Correlation Analysis
-- Correlation matrix for all numeric variables
-- Heatmap visualization
-- Automatically handles missing values
+  - 1. Select the numeric variable through drop down menu `Select numeric variable:`
+  - 2. Select the categorical variable through drop down menu `Select categorical variable:`
+- Bar Chart
+  - 1. Select the categorical variable through drop down menu `Select categorical variable:`
+- Scatter Plot
+  - 1. Select the numeric variable through drop down menu `Select numeric variable:`
+  - 2. Select the X variable through drop down menu `Select X variable:`
+  - 3. Select the Y variable through drop down menu `Select Y variable:`
 ## How to Use
 - Select dataset
 - Choose primary variable
 - (Optional) Choose secondary variable
 - View plot and summary
 ## Outputs
-- Interactive plots
-- Summary statistics
-- Correlation matrix and heatmap
+- Dataset Summary
+- EDA Plot
+- Missing Values by Column
+- Numeric Summary
+- Correlation Analysis
+- Correlation Matrix
+- Categorical Summary
 
 ## Team Members
 - Carrie Yan Yin Feng – Data upload and preview
