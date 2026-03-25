@@ -14,6 +14,8 @@ This project is an interactive Shiny web application for dataset upload, preproc
    - shiny
    - readxl
    - jsonlite
+   - tools
+   - ggplot2
 3. Run `app.R`
 4. Run data cleaning notebook `data cleaning(preprocessing).ipynb`:
    - Open the notebook in Jupyter Notebook / JupyterLab / VS Code
