@@ -6,7 +6,7 @@ This project is an interactive Shiny web application for dataset upload, preproc
 
 - The application follows a 4-step data analysis pipeline:
 
-## Dataset Upload & Preview
+# Dataset Upload & Preview
 - Data Cleaning
 - Feature Engineering
 - Exploratory Data Analysis (EDA)
