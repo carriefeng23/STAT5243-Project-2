@@ -15,9 +15,10 @@ This project is an interactive Shiny web application for dataset upload, preproc
 ## Workflow in the APP
 The app follows a 4-step pipeline
 1. Upload & Preview
-2. Data Cleaning
-3. Feature Engineering
-4. Exploratory Data Analysis (EDA)
+   - 
+3. Data Cleaning
+4. Feature Engineering
+5. Exploratory Data Analysis (EDA)
 
 ## Team Members
 - Carrie Yan Yin Feng – Data upload and preview
