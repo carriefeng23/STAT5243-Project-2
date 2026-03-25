@@ -53,28 +53,30 @@ The application follows a 4-step data analysis pipeline:
 - Cleaned dataset preview
 - Cleaning log (step-by-step actions)
 ## Download
-user can choose to download cleaned dataset and cleaning log as csv files
+user can choose to download cleaned dataset and cleaning log as csv files by clicking `Download Cleaned Dataset` and `Download Cleaning Log` at the side bar
 - cleaned_dataset.csv
 - cleaning_log.csv
 # Step 3: Feature Engineering
 ## Supported Methods
-- 1. Single-variable Transformations
-- Log transformation: log(x + 1)
-- Square: x²
-- Square root: √x
-- 2. Two-variable Interaction Features
-- Multiply: x * y
-- Divide: x / y (safe division)
-- Add: x + y
-- Subtract: x - y
-- 3. Numeric Binning
-- Convert continuous variables into categories
-- Select number of bins interactively
+user can choose which feature engineering type to use
+- Single-variable Transformations
+  - 1. Choose transformation type through drop down menu `Choose transformation:`
+    - Log: log(x + 1)
+    - Square: x²
+    - Square root: √x
+- Two-variable Interaction Features
+  - 1. Choose operation type through drop down menu `Choose operation:`
+    - Multiply: x * y
+    - Divide: x / y (safe division)
+    - Add: x + y
+    - Subtract: x - y
+- Binning
+  - 1. Select the number of bins in `Number of bins:`
 ## How to Use
 - Select feature engineering type
 - Choose variables
 - Click Apply Feature Engineering
-- Check results in Feature Engineering tab
+- Check results in Feature Engineering tab panel
 ## Key Features
 - Only numeric variables are selectable
 - Prevents invalid operations (e.g., division by zero)
@@ -84,6 +86,7 @@ user can choose to download cleaned dataset and cleaning log as csv files
 - Updated dataset with new features
 - Feature engineering log
 ## Download
+user can choose to download engineered dataset and feature log as csv files by clicking `Download Engineered Dataset` and `Download Feature Log` at the side bar
 - engineered_dataset.csv
 - feature_log.csv
 # Step 4: Exploratory Data Analysis (EDA)
