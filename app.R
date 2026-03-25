@@ -1,7 +1,7 @@
-library(shiny) 
+library(shiny) # interactive web app in R
 library(tools)
-library(readxl) 
-library(jsonlite) 
+library(readxl) # reads excel files
+library(jsonlite) # reads json files
 
 options(shiny.maxRequestSize = 30 * 1024^2) # increase max upload size to 30 mb
 
