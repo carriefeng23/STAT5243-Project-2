@@ -1,52 +1,123 @@
-#load packages for the app
-library(shiny) #interactie web app in R
+library(shiny) 
 library(tools)
-library(readxl) #reads excel files
-library(jsonlite) #reads json files
+library(readxl) 
+library(jsonlite) 
 
-options(shiny.maxRequestSize = 30*1024^2) #increase max upload size to 30 mb
+options(shiny.maxRequestSize = 30 * 1024^2) # increase max upload size to 30 mb
 
-#UI, the basix layout and components
+# UI, the basic layout and components
 ui <- fluidPage(
   titlePanel("STAT GR5243 Project 2 -- Web App Development"),
   
-  #sidebar that has dataset selection buttons
+  # sidebar that has dataset selection buttons and feature engineering controls
   sidebarLayout(
     sidebarPanel(
       h4("Step 1: Choose a dataset"),
       radioButtons(
-        "data_source","Select data source:",
+        "data_source", "Select data source:",
         choices = c("Upload file" = "upload",
                     "Use sample dataset" = "sample"),
         selected = "upload"
       ),
       
-      #file upload input
+      # file upload input
       conditionalPanel(
         condition = "input.data_source == 'upload'",
         fileInput(
-          "file","Upload a dataset",
-          accept = c(".csv", ".xlsx", ".xls", ".rds",".json") #acceptable file formats
+          "file", "Upload a dataset",
+          accept = c(".csv", ".xlsx", ".xls", ".rds", ".json") # acceptable file formats
         )
       ),
       
-      #dropdown menu for the built in datasets, using iris and mtcars datasets
+      # dropdown menu for the built-in datasets, using iris and mtcars datasets
       conditionalPanel(
         condition = "input.data_source == 'sample'",
         selectInput("sample_data", "Choose a built-in dataset:", choices = c("iris", "mtcars"))
-      )
+      ),
+      
+      hr(),
+      h4("Step 2: Feature Engineering"),
+      
+      # choose the feature engineering method
+      radioButtons(
+        "fe_type",
+        "Choose feature engineering type:",
+        choices = c(
+          "Single-variable transformation" = "single",
+          "Two-variable interaction" = "interaction",
+          "Binning" = "binning"
+        ),
+        selected = "single"
+      ),
+      
+      # controls for single-variable transformations
+      conditionalPanel(
+        condition = "input.fe_type == 'single'",
+        uiOutput("single_var_ui"),
+        selectInput(
+          "single_method",
+          "Choose transformation:",
+          choices = c("Log", "Square", "Square Root")
+        )
+      ),
+      
+      # controls for interaction features
+      conditionalPanel(
+        condition = "input.fe_type == 'interaction'",
+        uiOutput("var1_ui"),
+        uiOutput("var2_ui"),
+        selectInput(
+          "interaction_method",
+          "Choose operation:",
+          choices = c("Multiply", "Divide", "Add", "Subtract")
+        )
+      ),
+      
+      # controls for numeric binning
+      conditionalPanel(
+        condition = "input.fe_type == 'binning'",
+        uiOutput("bin_var_ui"),
+        numericInput("n_bins", "Number of bins:", value = 4, min = 2, max = 10)
+      ),
+      
+      # button to apply the selected feature engineering method
+      actionButton("apply_fe", "Apply Feature Engineering"),
+      br(), br(),
+      
+      # buttons to download outputs
+      downloadButton("download_data", "Download Engineered Dataset"),
+      br(), br(),
+      downloadButton("download_log", "Download Feature Log")
     ),
     
-    #main area that displays info about dataset and the preview
+    # main area that displays dataset info, preview, and feature engineering results
     mainPanel(
-      p("Upload your own dataset or choose a built-in example to preview and inspect its structure."),
-      
-      h3("Dataset Information"),
-      verbatimTextOutput("data_info"),
-      
-      br(),
-      h3("Data Preview"),
-      tableOutput("preview")
+      tabsetPanel(
+        tabPanel(
+          "Upload & Preview",
+          p("Upload your own dataset or choose a built-in example to preview and inspect its structure."),
+          
+          h3("Dataset Information"),
+          verbatimTextOutput("data_info"),
+          
+          br(),
+          h3("Data Preview"),
+          tableOutput("preview")
+        ),
+        
+        tabPanel(
+          "Feature Engineering",
+          h3("Current Dataset Preview"),
+          tableOutput("fe_preview"),
+          
+          br(),
+          h3("Feature Engineering Log"),
+          tableOutput("fe_log_preview"),
+          
+          br(),
+          verbatimTextOutput("fe_status")
+        )
+      )
     )
   )
 )
@@ -59,14 +130,14 @@ server <- function(input, output, session) {
       if (input$sample_data == "mtcars") return(as.data.frame(mtcars))
     }
     
-    req(input$file) #make sure the file is uploaded before continuing
+    req(input$file) # make sure the file is uploaded before continuing
     
-    #get the file name and path
+    # get the file name and path
     file_name <- as.character(input$file$name[[1]])
     file_path <- as.character(input$file$datapath[[1]])
     ext <- tolower(file_ext(file_name))
     
-    #read dataset based on file format
+    # read dataset based on file format
     if (ext == "csv") {
       df <- read.csv(file_path, stringsAsFactors = FALSE, check.names = FALSE)
     } else if (ext %in% c("xlsx", "xls")) {
@@ -76,13 +147,13 @@ server <- function(input, output, session) {
     } else if (ext == "json") {
       df <- as.data.frame(jsonlite::fromJSON(file_path))
     } else {
-      stop(paste("Unsupported file type. Supported types:", paste(supported_types, collapse = ", "))) #error message for unsupported file types
+      stop("Unsupported file type. Supported types: csv, xlsx, xls, rds, json")
     }
     
-    as.data.frame(df) #make sure to returna data frame
+    as.data.frame(df) # make sure to return a data frame
   })
   
-  #output
+  # output for upload and preview
   output$data_info <- renderPrint({
     df <- data_raw()
     
@@ -102,117 +173,11 @@ server <- function(input, output, session) {
   output$preview <- renderTable({
     head(data_raw(), 10)
   })
-}
-
-
-
-
-          
-#feature engineering
-
-library(shiny)   
-ui <- fluidPage(
-  titlePanel("Feature Engineering Module"),
   
-  sidebarLayout(
-    sidebarPanel(
-      h4("Step 3: Feature Engineering"),
-      
-      # select the dataset 
-      radioButtons(
-        "fe_data_source", "Select data source:",
-        choices = c("Upload dataset" = "upload",
-                    "Use sample dataset" = "sample"),
-        selected = "upload"
-      ),
-      
-      # show file upload input when the upload option is selected
-      conditionalPanel(
-        condition = "input.fe_data_source == 'upload'",
-        fileInput(
-          "fe_file", "Upload a cleaned dataset",
-          accept = c(".csv")
-        )
-      ),
-      
-      # show built-in dataset
-      conditionalPanel(
-        condition = "input.fe_data_source == 'sample'",
-        selectInput(
-          "fe_sample_data", "Choose a built-in dataset:",
-          choices = c("iris", "mtcars")
-        )
-      ),
-      
-      hr(),
-      
-      # choose the type of feature engineering operation
-      radioButtons(
-        "fe_type",
-        "Choose feature engineering type:",
-        choices = c(
-          "Single-variable transformation" = "single",
-          "Two-variable interaction" = "interaction",
-          "Binning" = "binning"
-        ),
-        selected = "single"
-      ),
-      
-      # show controls for single-variable transformations
-      conditionalPanel(
-        condition = "input.fe_type == 'single'",
-        uiOutput("single_var_ui"),
-        selectInput(
-          "single_method",
-          "Choose transformation:",
-          choices = c("Log", "Square", "Square Root")
-        )
-      ),
-      
-      # show controls for two-variable interaction features
-      conditionalPanel(
-        condition = "input.fe_type == 'interaction'",
-        uiOutput("var1_ui"),
-        uiOutput("var2_ui"),
-        selectInput(
-          "interaction_method",
-          "Choose operation:",
-          choices = c("Multiply", "Divide", "Add", "Subtract")
-        )
-      ),
-      
-      # show controls for numeric binning
-      conditionalPanel(
-        condition = "input.fe_type == 'binning'",
-        uiOutput("bin_var_ui"),
-        numericInput("n_bins", "Number of bins:", value = 4, min = 2, max = 10)
-      ),
-      
-      # apply the selected feature engineering method
-      actionButton("apply_fe", "Apply Feature Engineering"),
-      br(), br(),
-      
-      # save the engineered dataset and the feature log
-      actionButton("save_fe", "Save Engineered Dataset")
-    ),
-    
-    mainPanel(
-      h3("Current Dataset Preview"),
-      tableOutput("fe_preview"),
-      br(),
-      
-      h3("Feature Engineering Log"),
-      tableOutput("fe_log_preview"),
-      br(),
-      
-      verbatimTextOutput("fe_status")
-    )
-  )
-)
-
-server <- function(input, output, session) {
-  
+  # store the current working dataset after feature engineering operations
   data_fe <- reactiveVal(NULL)
+  
+  # store the feature engineering history for traceability
   fe_log <- reactiveVal(data.frame(
     step = integer(),
     feature_name = character(),
@@ -221,30 +186,9 @@ server <- function(input, output, session) {
     stringsAsFactors = FALSE
   ))
   
-
-  source_data <- reactive({
-    if (input$fe_data_source == "sample") {
-      if (input$fe_sample_data == "iris") {
-        return(as.data.frame(iris))
-      }
-      if (input$fe_sample_data == "mtcars") {
-        return(as.data.frame(mtcars))
-      }
-    }
-    
-    if (input$fe_data_source == "upload") {
-      req(input$fe_file)
-      return(read.csv(
-        input$fe_file$datapath,
-        stringsAsFactors = FALSE,
-        check.names = FALSE
-      ))
-    }
-  })
-  
-  # reset the working dataset and log 
+  # reset the working dataset and log whenever the source dataset changes
   observe({
-    df <- source_data()
+    df <- data_raw()
     req(df)
     
     data_fe(df)
@@ -257,7 +201,7 @@ server <- function(input, output, session) {
     ))
   })
   
-  # keep only numeric columns for the current feature engineering methods
+  # keep only numeric columns for current feature engineering methods
   numeric_cols <- reactive({
     df <- data_fe()
     req(df)
@@ -330,7 +274,7 @@ server <- function(input, output, session) {
         base_name <- paste0("sqrt_", var)
         new_name <- make_unique_name(df, base_name)
         
-
+        # apply square root only to non-negative values
         df[[new_name]] <- ifelse(df[[var]] >= 0, sqrt(df[[var]]), NA)
       }
       
@@ -392,8 +336,11 @@ server <- function(input, output, session) {
     if (input$fe_type == "binning") {
       var <- input$bin_var
       bins <- input$n_bins
+      
       base_name <- paste0(var, "_bin")
       new_name <- make_unique_name(df, base_name)
+      
+      # convert a continuous numeric variable into categorical bins
       df[[new_name]] <- cut(df[[var]], breaks = bins, include.lowest = TRUE)
       
       log_df <- rbind(
@@ -412,14 +359,25 @@ server <- function(input, output, session) {
     fe_log(log_df)
   })
   
-  # save the engineered dataset and the feature engineering log to csv files
-  observeEvent(input$save_fe, {
-    req(data_fe())
-    req(fe_log())
-    
-    write.csv(data_fe(), "engineered_dataset.csv", row.names = FALSE)
-    write.csv(fe_log(), "feature_log.csv", row.names = FALSE)
-  })
+  # download the current engineered dataset as a csv file
+  output$download_data <- downloadHandler(
+    filename = function() {
+      "engineered_dataset.csv"
+    },
+    content = function(file) {
+      write.csv(data_fe(), file, row.names = FALSE)
+    }
+  )
+  
+  # download the feature engineering log as a csv file
+  output$download_log <- downloadHandler(
+    filename = function() {
+      "feature_log.csv"
+    },
+    content = function(file) {
+      write.csv(fe_log(), file, row.names = FALSE)
+    }
+  )
   
   # display a preview of the current engineered dataset
   output$fe_preview <- renderTable({
@@ -427,12 +385,13 @@ server <- function(input, output, session) {
     head(data_fe(), 10)
   })
   
-
+  # display the feature engineering log
   output$fe_log_preview <- renderTable({
     req(fe_log())
     fe_log()
   })
   
+  # display the dataset status and current feature count
   output$fe_status <- renderPrint({
     df <- data_fe()
     req(df)
@@ -440,17 +399,8 @@ server <- function(input, output, session) {
     cat("Rows:", nrow(df), "\n")
     cat("Columns:", ncol(df), "\n")
     cat("New features created:", nrow(fe_log()), "\n")
-    
-    if (file.exists("engineered_dataset.csv")) {
-      cat("\nSaved file: engineered_dataset.csv")
-    }
-    
-    if (file.exists("feature_log.csv")) {
-      cat("\nSaved log: feature_log.csv")
-    }
   })
 }
-cat("\nEngineered dataset saved to working directory.")
-          
-#shiny app
+
+# shiny app
 shinyApp(ui = ui, server = server)
