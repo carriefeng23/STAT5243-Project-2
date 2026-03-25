@@ -799,10 +799,7 @@ server <- function(input, output, session) {
     }
   )
   
-  # ---------------------------
   # EDA section
-  # ---------------------------
-  
   eda_data <- reactive({
     if (input$eda_dataset_source == "raw") {
       data_raw()
