@@ -11,7 +11,7 @@ This project is an interactive Shiny web application for dataset upload, preproc
 - Feature Engineering
 - Exploratory Data Analysis (EDA)
 ## Step 1: Dataset Upload & Preview
-- What to Do
+ # What to Do
 - Choose:
 - Upload file, or
 - Use sample dataset (iris / mtcars)
@@ -22,15 +22,15 @@ This project is an interactive Shiny web application for dataset upload, preproc
 .xlsx / .xls
 .rds
 .json
-- What You Get
+# What You Get
 - Dataset structure:
 - Number of rows and columns
 - Column names and types
 - Missing values per column
 - Data preview:
 - First 10 rows of the dataset
-# Step 2: Data Cleaning
-- Available Operations
+## Step 2: Data Cleaning
+# Available Operations
 - 1. Remove Duplicate Rows
 - Removes exact duplicate observations
 - 2. Handle Missing Values
@@ -45,18 +45,18 @@ This project is an interactive Shiny web application for dataset upload, preproc
 
 - Standardization (z-score)
 - Min-Max scaling
-- How to Use
+# How to Use
 - Select cleaning options in the sidebar
 - Click Apply Data Cleaning
 - Go to Data Cleaning tab
-- Outputs
+# Outputs
 - Cleaned dataset preview
 - Cleaning log (step-by-step actions)
-- Download
+# Download
 - cleaned_dataset.csv
 - cleaning_log.csv
 ## Step 3: Feature Engineering
-- Supported Methods
+# Supported Methods
 - 1. Single-variable Transformations
 - Log transformation: log(x + 1)
 - Square: x²
@@ -69,20 +69,20 @@ This project is an interactive Shiny web application for dataset upload, preproc
 - 3. Numeric Binning
 - Convert continuous variables into categories
 - Select number of bins interactively
-- How to Use
+# How to Use
 - Select feature engineering type
 - Choose variables
 - Click Apply Feature Engineering
 - Check results in Feature Engineering tab
-- Key Features
+# Key Features
 - Only numeric variables are selectable
 - Prevents invalid operations (e.g., division by zero)
 - Automatically generates unique feature names
 - Updates dataset instantly
-- Outputs
+# Outputs
 - Updated dataset with new features
 - Feature engineering log
-- Download
+# Download
 - engineered_dataset.csv
 - feature_log.csv
 ## Step 4: Exploratory Data Analysis (EDA)
@@ -111,12 +111,12 @@ This project is an interactive Shiny web application for dataset upload, preproc
 - Correlation matrix for all numeric variables
 - Heatmap visualization
 - Automatically handles missing values
-- How to Use
+# How to Use
 - Select dataset
 - Choose primary variable
 - (Optional) Choose secondary variable
 - View plot and summary
-- Outputs
+# Outputs
 - Interactive plots
 - Summary statistics
 - Correlation matrix and heatmap
