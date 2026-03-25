@@ -29,29 +29,31 @@ The application follows a 4-step data analysis pipeline:
 - Data preview:
 - First 10 rows of the dataset
 # Step 2: Data Cleaning
-## Available Operations
-- 1. Remove Duplicate Rows
-- Removes exact duplicate observations
-- 2. Handle Missing Values
+## Available Operations (can be selected from the side bar)
+- Remove Duplicate Rows
+  - 1. Removes exact duplicate observations
 
-- Choose one method:
-
-- Remove rows with missing values
-- Mean imputation (numeric only)
-- 3. Scale Numeric Variables (Optional)
-
-- Choose one method:
-
-- Standardization (z-score)
-- Min-Max scaling
+- Handle Missing Values
+  - 1. Choose one method from the drop down menu `Missing value method`:
+    - Remove rows with missing values
+    - Mean imputation (numeric only)
+- Handle outliers
+  - 1. Choose one method from the drop down menu `Outlier method`:
+    - Cap outliers using IQR
+    - Remove rows with outliers
+- Scale Numeric Variables (Optional)
+  - 1. Choose one method from the drop down menu `Scaling method`:
+    - Standardization (z-score)
+    - Min-Max scaling
 ## How to Use
 - Select cleaning options in the sidebar
 - Click Apply Data Cleaning
-- Go to Data Cleaning tab
+- Go to Data Cleaning tab panel
 ## Outputs
 - Cleaned dataset preview
 - Cleaning log (step-by-step actions)
 ## Download
+user can choose to download cleaned dataset and cleaning log as csv files
 - cleaned_dataset.csv
 - cleaning_log.csv
 # Step 3: Feature Engineering
